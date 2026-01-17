@@ -75,9 +75,6 @@ module.exports = async (req, res) => {
     if (!token) return sendJson(res, 500, { ok: false, error: "Missing TELEGRAM_BOT_TOKEN" });
 
     // Security: secret token (если установлен в env)
-    const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-    const gotSecret = req.headers["x-telegram-bot-api-secret-token"];
-    if (secret && gotSecret !== secret) return sendJson(res, 401, { ok: false, error: "Invalid secret" });
 
     const update = req.body || {};
     stats.updatesTotal += 1;
