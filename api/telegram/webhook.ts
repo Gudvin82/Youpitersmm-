@@ -1,16 +1,9 @@
-export const config = { runtime: "nodejs" };
-
-async function tgSendMessage(token: string, chatId: number, text: string) {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram sendMessage failed: ${res.status} ${body}`);
-  }
-}
+export const config = {
+  runtime: "nodejs",
+  api: {
+    bodyParser: true,
+  },
+};
 
 function send(res: any, status: number, obj: any) {
   res.statusCode = status;
@@ -25,25 +18,31 @@ export default async function handler(req: any, res: any) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) return send(res, 500, { ok: false, error: "Missing TELEGRAM_BOT_TOKEN" });
 
-    // Временно НЕ проверяем секрет, пока не оживим /start
-    const update = req.body ?? {};
-    const msg = update?.message;
-    const text: string | undefined = msg?.text;
-    const chatId: number | undefined = msg?.chat?.id;
+    const update = req.body || {};
+    const msg = update.message;
+    const text = msg?.text;
+    const chatId = msg?.chat?.id;
 
-    if (chatId && typeof text === "string") {
-      if (text === "/start") {
-        await tgSendMessage(token, chatId, "✅ YoupiterSMM бот на связи. Напиши /help");
-      } else if (text === "/help") {
-        await tgSendMessage(token, chatId, "Доступно: /start, /help");
-      } else {
-        await tgSendMessage(token, chatId, "Понял. Пока MVP 🙂 Напиши /help");
-      }
+    // На тестовом "{}" просто отвечаем ok
+    if (!chatId || typeof text !== "string") {
+      return send(res, 200, { ok: true, note: "no message" });
+    }
+
+    // Если пришёл /start — отвечаем
+    if (text === "/start") {
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: "✅ YoupiterSMM бот на связи. Напиши /help" }),
+      });
+      const body = await r.text();
+      if (!r.ok) return send(res, 500, { ok: false, error: "sendMessage failed", status: r.status, body });
+      return send(res, 200, { ok: true });
     }
 
     return send(res, 200, { ok: true });
   } catch (e: any) {
-    return send(res, 500, { ok: false, error: e?.message ?? "Unknown error" });
+    return send(res, 500, { ok: false, error: e?.message ?? "Unknown error", stack: e?.stack ?? null });
   }
 }
 
