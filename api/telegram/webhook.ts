@@ -1,4 +1,4 @@
-export const config = { runtime: "nodejs18.x" };
+export const config = { runtime: "nodejs" };
 
 async function tgSendMessage(token: string, chatId: number, text: string) {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
